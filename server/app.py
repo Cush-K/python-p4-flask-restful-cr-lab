@@ -9,7 +9,7 @@ from models import db, Plant
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plants.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = True
+app.json.compact = False
 
 migrate = Migrate(app, db)
 db.init_app(app)
@@ -17,10 +17,48 @@ db.init_app(app)
 api = Api(app)
 
 class Plants(Resource):
-    pass
+    def get(self):
+        plants_dict = [plant.to_dict() for plant in Plant.query.all()]
+        return make_response(plants_dict, 200)
+    
+    def post(self):
+        new_plant = Plant(
+            name = request.json['name'],
+            image = request.json['image'],
+            price = request.json['price']
+        )
+        
+        db.session.add(new_plant)
+        db.session.commit()
+        
+        return make_response(new_plant.to_dict(), 200)
+    
+api.add_resource(Plants, '/plants')
 
 class PlantByID(Resource):
-    pass
+    
+    def get(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+        return make_response(plant.to_dict(), 200)
+    
+    def patch(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+        
+        for attr in request.json:
+            setattr(plant, attr, request.json.get(attr))
+            
+        db.session.add(plant)
+        db.session.commit()
+        
+        return make_response(plant.to_dict(), 200)
+    
+    def delete(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+        
+        db. session.delete(plant)
+        db.session.commit()
+    
+api.add_resource(PlantByID, '/plants/<int:id>')
         
 
 if __name__ == '__main__':
